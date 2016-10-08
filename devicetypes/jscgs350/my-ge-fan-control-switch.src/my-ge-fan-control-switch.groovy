@@ -16,6 +16,7 @@
  *  -------
  *  02-18-2016 : Initial commit
  *  03-11-2016 : Due to ST's v2.1.0 app totally hosing up SECONDARY_CONTROL, implemented a workaround to display that info in a separate tile.
+ *  08-14-2016 : Using SECONDARY_CONTROL again.
  *
  */
  
@@ -52,8 +53,7 @@ metadata {
 				attributeState "changingState", action:"refresh.refresh", label:'ADJUSTING', icon:"st.Lighting.light24", backgroundColor:"#2179b8"
 			}
             tileAttribute ("statusText", key: "SECONDARY_CONTROL") {
-//           		attributeState "statusText", label:'${currentValue}'
-                attributeState "statusText", label:''
+           		attributeState "statusText", label:'${currentValue}'
             }
 		}
 		standardTile("lowSpeed", "device.currentState", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
@@ -77,7 +77,7 @@ metadata {
 			state "statusText", label:'${currentValue}', backgroundColor:"#ffffff"
 		}
 		main(["switch"])
-		details(["switch", "statusText", "lowSpeed", "medSpeed", "highSpeed", "indicator", "refresh"])
+		details(["switch", "lowSpeed", "medSpeed", "highSpeed", "indicator", "refresh"])
 	}
 	preferences {
 		section("Fan Thresholds") {
@@ -169,7 +169,8 @@ def doCreateEvent(physicalgraph.zwave.Command cmd, Map item1) {
 	item1.name = "switch"
 	item1.value = cmd.value ? "on" : "off"
 	if (item1.value == "off") {
-		sendEvent(name: "currentState", value: "OFF" as String)
+		sendEvent(name: "currentState", value: "OFF" as String, isStateChange: true)
+        sendEvent(name: "switch", value: "off" as String, isStateChange: true)
 	}
 	item1.handlerName = item1.value
 	item1.descriptionText = "${item1.linkText} was turned ${item1.value}"
@@ -188,15 +189,15 @@ def doCreateEvent(physicalgraph.zwave.Command cmd, Map item1) {
 		item2.displayed = false
 
 		if (item2.value <= lowThresholdvalue) {
-			sendEvent(name: "currentState", value: "LOW" as String)
+			sendEvent(name: "currentState", value: "LOW" as String, isStateChange: true)
             sendEvent(name: "currentSpeed", value: "LOW" as String)
 		}
 		if (item2.value >= lowThresholdvalue+1 && item2.value <= medThresholdvalue) {
-			sendEvent(name: "currentState", value: "MED" as String)
+			sendEvent(name: "currentState", value: "MED" as String, isStateChange: true)
             sendEvent(name: "currentSpeed", value: "MED" as String)
 	 	}
 		if (item2.value >= medThresholdvalue+1) {
-			sendEvent(name: "currentState", value: "HIGH" as String)
+			sendEvent(name: "currentState", value: "HIGH" as String, isStateChange: true)
             sendEvent(name: "currentSpeed", value: "HIGH" as String)
 		}
 
@@ -227,6 +228,8 @@ def on() {
 def off() {
 	log.info "off"
 	delayBetween ([zwave.basicV1.basicSet(value: 0x00).format(), zwave.switchMultilevelV1.switchMultilevelGet().format()], 1000)
+    sendEvent(name: "currentState", value: "OFF" as String, isStateChange: true)
+    sendEvent(name: "switch", value: "off" as String, isStateChange: true)
 }
 
 def setLevel(value) {
